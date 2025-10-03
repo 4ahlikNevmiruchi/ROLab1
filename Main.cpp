@@ -33,6 +33,10 @@ int main(int argc, char* argv[]) {
     double* pResult = nullptr;      // Result vector (all processes)
     double* pProcRows = nullptr;    // Matrix stripe for this process
     double* pProcResult = nullptr;  // Result block for this process
+
+    double startSerial = 0, endSerial = 0, serialTime = 0;
+    double startParallel = 0, endParallel = 0, parallelTime = 0;
+
     int Size = 0;                   // Matrix/vector size
     int RowNum = 0;                 // Number of rows for this process
 
@@ -49,8 +53,22 @@ int main(int argc, char* argv[]) {
     // Memory allocation and data initialization
     ProcessInitialization(pMatrix, pVector, pResult, pProcRows, pProcResult, Size, RowNum);
 
+    // Serial timing (only on root)
+    if (ProcRank == 0) {
+        double* pSerialResult = new double[Size];
+        startSerial = MPI_Wtime();
+        SerialResultCalculation(pMatrix, pVector, pSerialResult, Size);
+        endSerial = MPI_Wtime();
+        serialTime = endSerial - startSerial;
+        delete[] pSerialResult;
+    }
+
     // Distribute the initial data among the processes
     DataDistribution(pMatrix, pProcRows, pVector, Size, RowNum);
+
+    // Parallel timing (all processes, but only root prints)
+    MPI_Barrier(MPI_COMM_WORLD);
+    startParallel = MPI_Wtime();
 
     // Uncomment for debugging data distribution
     // TestDistribution(pMatrix, pVector, pProcRows, Size, RowNum);
@@ -64,10 +82,15 @@ int main(int argc, char* argv[]) {
     // Gather the result vector
     ResultReplication(pProcResult, pResult, Size, RowNum);
 
-    // Print the result vector on root
+    MPI_Barrier(MPI_COMM_WORLD);
+    endParallel = MPI_Wtime();
+    parallelTime = endParallel - startParallel;
+
+    // Print results in CSV format
     if (ProcRank == 0) {
-        printf("\nResult Vector:\n");
-        PrintVector(pResult, Size);
+        double speedup = serialTime / parallelTime;
+        printf("Size,SerialTime,ParallelTime,Speedup,ProcNum\n");
+        printf("%d,%.6f,%.6f,%.2f,%d\n", Size, serialTime, parallelTime, speedup, ProcNum);
     }
 
     // Test correctness (compare with serial result)
