@@ -19,9 +19,9 @@ The results of serial and parallel algorithms are IDENTICAL.
 
 THE FILLED OUT TABLE
 
-|             |                  |                        Parallel algorithm                               |
-| Matrix size | Serial algorithm |       2 processors     |     4 processors      |      8 processors      |
-|             |                  |    Time     | Speed up |   Time    | Speed up  |    Time    | Speed up  |
+|      -      -         -        -             -          Parallel algorithm                  -            |
+| Matrix size - Serial algorithm -       2 processors     -     4 processors      -      8 processors      |
+|      -      -         -        -    Time     - Speed up -   Time    - Speed up  -    Time    - Speed up  |
 |:-----------:|:----------------:|:-----------:|:--------:|:---------:|:---------:|:----------:|:---------:|
 |10           |0.000001          |0.000006     |0.12      |0.000021   |0.04       |0.000049    |0.01       |
 |100          |
