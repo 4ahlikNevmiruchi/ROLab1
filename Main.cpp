@@ -39,10 +39,20 @@ int main(int argc, char* argv[]) {
 
     int Size = 0;                   // Matrix/vector size
     int RowNum = 0;                 // Number of rows for this process
-
+    
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &ProcNum);
     MPI_Comm_rank(MPI_COMM_WORLD, &ProcRank);
+
+    bool runSerial = true;
+    if (ProcRank == 0) {
+        printf("Run serial algorithm for timing/correctness? (1 = yes, 0 = no): ");
+        fflush(stdout);
+        int tmp = 1;
+        scanf("%d", &tmp);
+        runSerial = (tmp != 0);
+    }
+    MPI_Bcast(&runSerial, 1, MPI_CXX_BOOL, 0, MPI_COMM_WORLD);
 
     if (ProcRank == 0) {
         printf("Parallel matrix-vector multiplication program\n");
@@ -54,7 +64,7 @@ int main(int argc, char* argv[]) {
     ProcessInitialization(pMatrix, pVector, pResult, pProcRows, pProcResult, Size, RowNum);
 
     // Serial timing (only on root)
-    if (ProcRank == 0) {
+    if (runSerial && ProcRank == 0) {
         double* pSerialResult = new double[Size];
         startSerial = MPI_Wtime();
         SerialResultCalculation(pMatrix, pVector, pSerialResult, Size);
@@ -86,15 +96,19 @@ int main(int argc, char* argv[]) {
     endParallel = MPI_Wtime();
     parallelTime = endParallel - startParallel;
 
-    // Print results in CSV format
+    // Print results
     if (ProcRank == 0) {
-        double speedup = serialTime / parallelTime;
-        printf("Size,SerialTime,ParallelTime,Speedup,ProcNum\n");
-        printf("%d,%.6f,%.6f,%.2f,%d\n", Size, serialTime, parallelTime, speedup, ProcNum);
+        if (runSerial) {
+            double speedup = serialTime / parallelTime;
+            printf("%d,%.6f,%.6f,%.2f,%d\n", Size, serialTime, parallelTime, speedup, ProcNum);
+        } else {
+            printf("%d,N/A,%.6f,N/A,%d\n", Size, parallelTime, ProcNum);
+        }
     }
 
     // Test correctness (compare with serial result)
-    TestResult(pMatrix, pVector, pResult, Size);
+    if (runSerial)
+        TestResult(pMatrix, pVector, pResult, Size);
 
     // Process termination
     ProcessTermination(pMatrix, pVector, pResult, pProcRows, pProcResult);
